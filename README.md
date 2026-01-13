@@ -1,3 +1,4 @@
+## Fully vibe-coded, use at your own expense.
 # asciivisualizerpy
 
 Terminal braille visualizer with a camera silhouette, kick-reactive halo spikes, halo particles, and ripple rings.
