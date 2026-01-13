@@ -13,7 +13,7 @@ from .visualizer import (
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Terminal ASCII visualizer with camera silhouette + kick-reactive density."
+        description="Terminal braille visualizer with camera silhouette + kick-reactive halo."
     )
     parser.add_argument(
         "--config",

@@ -19,10 +19,8 @@ except ImportError:  # pragma: no cover - optional dependency
 
 CHAR_ASPECT = 0.5
 FG_THRESHOLD = 200
-SOLID_SILHOUETTE = False
 SEGMENTATION_THRESHOLD = 0.35
 MOG2_LEARNING_RATE = 0.002
-RENDER_MODE = "braille"
 COLOR_ENABLED = True
 COLOR_PALETTE = [
     (80, 160, 255),
@@ -38,10 +36,8 @@ COLOR_PALETTE = [
 ]
 COLOR_KICK_THRESHOLD = 0.25
 COLOR_MIN_INTERVAL = 0.12
-BRAILLE_WHITE_SPIKES = True
-WHITE_COLOR = "\x1b[38;2;255;255;255m"
+HALO_HIGHLIGHT_COLOR = "\x1b[38;2;255;255;255m"
 BRAILLE_CELL = (4, 2)
-BRAILLE_KICK_BOOST = 0.25
 BRAILLE_DITHER = (np.array([[0, 4], [6, 2], [3, 7], [5, 1]], dtype=np.float32) + 0.5) / 8.0
 BRAILLE_LOOKUP = tuple(chr(0x2800 + value) for value in range(256))
 RIPPLES_ENABLED = True
@@ -56,62 +52,26 @@ RIPPLE_MAX_RINGS = 3
 RIPPLE_MAX_RADIUS_RATIO = 1.2
 RIPPLE_INSIDE_ONLY = False
 RIPPLE_ORIGIN = "centroid"
-SHELF_ENABLED = False
-SHELF_BANDS = 3
-SHELF_BASE = 0.12
-SHELF_GAIN = 0.85
-SHELF_MAX_HEIGHT_RATIO = 0.4
-SHELF_MIN_HEIGHT = 1
-SHELF_WAVE_FREQ = 2.6
-SHELF_SPEED = 2.0
-SHELF_PARABOLA_POWER = 1.0
-SHELF_OUTSIDE_ONLY = True
-SHELF_OUTSET = 2
-SHELF_ARC_RATIO = 0.25
-SHELF_SAMPLE_STEP = 1
-SHELF_MODE = "distributed"
-SHELF_SWEEP_SPEED = 0.08
-SHELF_RANDOM_HOLD = 0.5
-SHELF_THICKNESS = 2
-SHELF_SMOOTH_WINDOW = 7
-SHELF_BASE_OFFSET_RATIO = 0.18
-SHELF_SPIKE_RATIO = 0.55
 HALO_ENABLED = True
 HALO_BANDS = 12
 HALO_LOW_HZ = 80.0
 HALO_HIGH_HZ = 8000.0
 HALO_MAX_HEIGHT_RATIO = 0.45
-HALO_MIN_HEIGHT = 1
 HALO_BASE_OFFSET_RATIO = 0.12
 HALO_OUTSET = 2
-HALO_SAMPLE_STEP = 1
-HALO_SMOOTH_WINDOW = 5
 HALO_THICKNESS = 1
-HALO_CONNECT_TIPS = False
-HALO_CONNECT_THICKNESS = 1
-HALO_CONNECT_STRENGTH = 0.3
 HALO_GAMMA = 1.6
 HALO_KICK_GAIN = 0.35
-HALO_ROTATE_SPEED = 0.0
 HALO_OUTSIDE_ONLY = True
-HALO_INTENSITY_GAIN = 0.9
-HALO_INTENSITY_KICK = 0.35
 HALO_INTERP_BANDS = False
 HALO_SOLID_FILL = True
-HALO_SPIKE_COUNT = 1
-HALO_SPIKE_WIDTH_RATIO = 1.6
-HALO_SPIKE_MIN_WIDTH = 7
-HALO_SPIKE_MAX_RATIO = 0.2
-HALO_SPIKE_PARABOLA = 1.4
 HALO_TIP_OUTLINE = True
-HALO_GEOMETRY = "circle"
 HALO_CIRCLE_TOP_START_ANGLE = math.pi * 0.85
 HALO_CIRCLE_TOP_END_ANGLE = 0.0
 HALO_CIRCLE_BOTTOM_START_ANGLE = 0.0
 HALO_CIRCLE_BOTTOM_END_ANGLE = math.tau - HALO_CIRCLE_TOP_START_ANGLE
 HALO_CIRCLE_TOP_SPIKES = 1
 HALO_CIRCLE_BOTTOM_SPIKES = 6
-HALO_CIRCLE_SPIKE_ANGLE = 0.6
 HALO_CIRCLE_BASE_WIDTH_RATIO = 0.16
 HALO_CIRCLE_BASE_WIDTH_MIN = 6
 HALO_CIRCLE_CURVE_SAMPLES = 11
@@ -119,35 +79,16 @@ HALO_CIRCLE_PARABOLA = 1.0
 HALO_CIRCLE_CENTER_X_OFFSET = 0.0
 HALO_CIRCLE_CENTER_Y_OFFSET = 0.5
 HALO_CIRCLE_RADIUS_SCALE = 0.7
-RAMP_LEVELS = [
-    "░▒▓",
-    "░▒▓█",
-    "░▒▓██",
-    "░▒▓███",
-    "░▒▓████",
-]
-SPIKES_ENABLED = True
-SPIKE_MIN_KICK = 0.05
-SPIKE_MAX_RADIUS = 6
-SPIKE_GAMMA = 1.4
-SPIKE_DENSITY_BASE = 0.08
-SPIKE_DENSITY_GAIN = 0.45
-SPIKE_OUTSIDE_ONLY = True
-SPIKE_BOOST_VALUE = 255
+HALO_PARTICLES_ENABLED = True
+HALO_PARTICLE_MIN_KICK = 0.05
+HALO_PARTICLE_MAX_RADIUS = 6
+HALO_PARTICLE_GAMMA = 1.4
+HALO_PARTICLE_DENSITY_BASE = 0.08
+HALO_PARTICLE_DENSITY_GAIN = 0.45
+HALO_PARTICLE_OUTSIDE_ONLY = True
 DEFAULT_SEGMENTATION_MODEL = (
     Path(__file__).resolve().parents[2] / "assets" / "models" / "selfie_segmenter.tflite"
 )
-
-
-def _build_lookup(ramp: str) -> Tuple[str, ...]:
-    steps = len(ramp) - 1
-    return tuple(ramp[int(value / 255 * steps)] for value in range(256))
-
-
-def _pick_ramp(level: float) -> str:
-    index = int(round(level * (len(RAMP_LEVELS) - 1)))
-    index = max(0, min(index, len(RAMP_LEVELS) - 1))
-    return RAMP_LEVELS[index]
 
 
 def _color_for_rgb(color: Tuple[int, int, int]) -> str:
@@ -170,7 +111,7 @@ def _grid_for_shape(
     return x_grid, y_grid
 
 
-def _ripple_origin(mask: np.ndarray, fallback: Tuple[float, float]) -> Tuple[float, float]:
+def _mask_centroid(mask: np.ndarray, fallback: Tuple[float, float]) -> Tuple[float, float]:
     if not np.any(mask):
         return fallback
     moments = cv2.moments(mask, binaryImage=True)
@@ -219,18 +160,6 @@ def _largest_contour(mask: np.ndarray) -> np.ndarray | None:
     return contour[:, 0, :].astype(np.float32)
 
 
-def _smooth_closed_curve(points: np.ndarray, window: int) -> np.ndarray:
-    if window <= 1 or points.shape[0] <= window:
-        return points
-    window = window if window % 2 == 1 else window + 1
-    pad = window // 2
-    extended = np.vstack([points[-pad:], points, points[:pad]])
-    kernel = np.ones(window, dtype=np.float32) / float(window)
-    xs = np.convolve(extended[:, 0], kernel, mode="valid")
-    ys = np.convolve(extended[:, 1], kernel, mode="valid")
-    return np.stack([xs, ys], axis=1).astype(np.float32)
-
-
 def _braille_dither(shape: Tuple[int, int], cache: Dict[Tuple[int, int], np.ndarray]) -> np.ndarray:
     cached = cache.get(shape)
     if cached is not None:
@@ -246,8 +175,7 @@ def _braille_dither(shape: Tuple[int, int], cache: Dict[Tuple[int, int], np.ndar
 def _frame_to_braille(
     gray: np.ndarray,
     mask: np.ndarray,
-    kick_level: float,
-    spike_mask: np.ndarray | None,
+    boost_mask: np.ndarray | None,
     ripple_intensity: np.ndarray | None,
     dither_cache: Dict[Tuple[int, int], np.ndarray],
     highlight_mask: np.ndarray | None = None,
@@ -262,17 +190,15 @@ def _frame_to_braille(
     width = w_cells * cell_w
     gray = gray[:height, :width]
     mask = mask[:height, :width]
-    if spike_mask is not None:
-        spike_mask = spike_mask[:height, :width]
+    if boost_mask is not None:
+        boost_mask = boost_mask[:height, :width]
 
     ink = (255 - gray).astype(np.float32) / 255.0
-    if BRAILLE_KICK_BOOST > 0.0:
-        ink = np.clip(ink + kick_level * BRAILLE_KICK_BOOST, 0.0, 1.0)
     if ripple_intensity is not None:
         ripple_intensity = ripple_intensity[:height, :width]
         ink = np.clip(ink + ripple_intensity * RIPPLE_BOOST, 0.0, 1.0)
-    if spike_mask is not None:
-        ink[spike_mask > 0] = 1.0
+    if boost_mask is not None:
+        ink[boost_mask > 0] = 1.0
 
     thresholds = _braille_dither((height, width), dither_cache)
     dots = (ink > thresholds) & (mask > 0)
@@ -303,13 +229,10 @@ def _frame_to_braille(
 
 def _colorize_braille(
     lines: list[str],
-    highlight_cells: np.ndarray | None,
+    highlight_cells: np.ndarray,
     base_color: str,
     highlight_color: str,
 ) -> str:
-    if highlight_cells is None or not np.any(highlight_cells):
-        return "\n".join(lines)
-
     reset = "\x1b[0m"
     rendered = []
     for row_index, line in enumerate(lines):
@@ -352,37 +275,6 @@ def _compute_output_size(
         target_w = max(1, int(target_h / (aspect * CHAR_ASPECT)))
 
     return max(1, target_w), max(1, target_h)
-
-
-def _frame_to_ascii(
-    gray: np.ndarray,
-    mask: np.ndarray,
-    lookup: Tuple[str, ...],
-    solid_silhouette: bool,
-    boost_mask: np.ndarray | None = None,
-    boost_value: int = SPIKE_BOOST_VALUE,
-) -> str:
-    lines = []
-    if boost_mask is None:
-        for row_gray, row_mask in zip(gray, mask):
-            line_chars = [
-                lookup[255 if solid_silhouette else pixel] if mask_value else " "
-                for pixel, mask_value in zip(row_gray, row_mask)
-            ]
-            lines.append("".join(line_chars))
-    else:
-        for row_gray, row_mask, row_boost in zip(gray, mask, boost_mask):
-            line = []
-            for pixel, mask_value, boost_value_flag in zip(row_gray, row_mask, row_boost):
-                if not mask_value:
-                    line.append(" ")
-                    continue
-                value = 255 if solid_silhouette else int(pixel)
-                if boost_value_flag:
-                    value = max(value, boost_value)
-                line.append(lookup[value])
-            lines.append("".join(line))
-    return "\n".join(lines)
 
 
 def _format_status(fps: float, kick_level: float, audio_enabled: bool) -> str:
@@ -500,10 +392,9 @@ def run(
         (term_size.columns, term_size.lines),
     )
 
-    lookup_cache: Dict[str, Tuple[str, ...]] = {}
     braille_dither_cache: Dict[Tuple[int, int], np.ndarray] = {}
     grid_cache: Dict[Tuple[int, int], Tuple[np.ndarray, np.ndarray]] = {}
-    spike_kernels: Dict[int, np.ndarray] = {}
+    halo_particle_kernels: Dict[int, np.ndarray] = {}
     rng = np.random.default_rng()
     ripples: list[Tuple[float, float, float, float]] = []
     last_ripple_time = -1.0
@@ -511,8 +402,6 @@ def run(
     color_index = 0
     last_color_time = -1.0
     last_color_kick = 0.0
-    shelf_center_index = 0
-    last_shelf_change = -1.0
     last_time = time.monotonic()
     fps = 0.0
 
@@ -534,12 +423,8 @@ def run(
             if (new_w, new_h) != (out_w, out_h):
                 out_w, out_h = new_w, new_h
 
-            if RENDER_MODE == "braille":
-                render_w = out_w * BRAILLE_CELL[1]
-                render_h = out_h * BRAILLE_CELL[0]
-            else:
-                render_w = out_w
-                render_h = out_h
+            render_w = out_w * BRAILLE_CELL[1]
+            render_h = out_h * BRAILLE_CELL[0]
             resized = cv2.resize(frame, (render_w, render_h), interpolation=cv2.INTER_AREA)
             gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 
@@ -575,9 +460,6 @@ def run(
             band_levels = (
                 kick_meter.read_bands() if audio_enabled else np.empty(0, dtype=np.float32)
             )
-            if RENDER_MODE != "braille":
-                ramp = _pick_ramp(kick_level)
-                lookup = lookup_cache.setdefault(ramp, _build_lookup(ramp))
             if COLOR_ENABLED and COLOR_PALETTE:
                 if (
                     kick_level >= COLOR_KICK_THRESHOLD
@@ -602,7 +484,7 @@ def run(
                 ):
                     fallback = (gray.shape[1] / 2.0, gray.shape[0] / 2.0)
                     if RIPPLE_ORIGIN == "centroid":
-                        origin_x, origin_y = _ripple_origin(base_mask, fallback)
+                        origin_x, origin_y = _mask_centroid(base_mask, fallback)
                     else:
                         origin_x, origin_y = fallback
                     ripples.append((frame_time, origin_x, origin_y, kick_level))
@@ -641,7 +523,6 @@ def run(
                         ripple_intensity = np.clip(intensity, 0.0, 1.0)
 
             halo_mask = None
-            halo_intensity = None
             if HALO_ENABLED and band_levels.size > 0 and np.any(base_mask):
                 bounds = _mask_bounds(base_mask)
                 contour = _largest_contour(base_mask)
@@ -651,11 +532,10 @@ def run(
                     height = y_max - y_min + 1
                     if width > 4 and height > 4 and contour.shape[0] > 12:
                         halo_mask = np.zeros_like(base_mask)
-                        halo_intensity = np.zeros_like(gray, dtype=np.float32)
                         max_height = max(1.0, min(width, height) * HALO_MAX_HEIGHT_RATIO)
                         base_offset = HALO_OUTSET + max_height * HALO_BASE_OFFSET_RATIO
                         band_count = band_levels.size
-                        spike_count = max(1, HALO_SPIKE_COUNT)
+
                         def band_level_for_fraction(frac: float) -> float:
                             if band_count <= 1:
                                 return float(band_levels[0]) if band_count else 0.0
@@ -673,506 +553,224 @@ def run(
                                 level = float(band_levels[idx])
                             return max(0.0, min(1.0, level))
 
-                        if HALO_GEOMETRY == "circle":
-                            center = _ripple_origin(
-                                base_mask,
-                                (x_min + width / 2.0, y_min + height / 2.0),
-                            )
-                            center = (
-                                center[0] + width * HALO_CIRCLE_CENTER_X_OFFSET,
-                                center[1] + height * HALO_CIRCLE_CENTER_Y_OFFSET,
-                            )
-                            center = (
-                                float(np.clip(center[0], 0, gray.shape[1] - 1)),
-                                float(np.clip(center[1], 0, gray.shape[0] - 1)),
-                            )
-                            max_steps = int(max(width, height) * 2)
-                            top_spikes = max(0, HALO_CIRCLE_TOP_SPIKES)
-                            bottom_spikes = max(0, HALO_CIRCLE_BOTTOM_SPIKES)
-                            arcs: list[Tuple[float, float, int]] = []
-                            if top_spikes:
-                                arcs.append(
-                                    (
-                                        HALO_CIRCLE_TOP_START_ANGLE,
-                                        HALO_CIRCLE_TOP_END_ANGLE,
-                                        top_spikes,
-                                    )
+                        center = _mask_centroid(
+                            base_mask,
+                            (x_min + width / 2.0, y_min + height / 2.0),
+                        )
+                        center = (
+                            center[0] + width * HALO_CIRCLE_CENTER_X_OFFSET,
+                            center[1] + height * HALO_CIRCLE_CENTER_Y_OFFSET,
+                        )
+                        center = (
+                            float(np.clip(center[0], 0, gray.shape[1] - 1)),
+                            float(np.clip(center[1], 0, gray.shape[0] - 1)),
+                        )
+                        max_steps = int(max(width, height) * 2)
+                        top_spikes = max(0, HALO_CIRCLE_TOP_SPIKES)
+                        bottom_spikes = max(0, HALO_CIRCLE_BOTTOM_SPIKES)
+                        arcs: list[Tuple[float, float, int]] = []
+                        if top_spikes:
+                            arcs.append(
+                                (
+                                    HALO_CIRCLE_TOP_START_ANGLE,
+                                    HALO_CIRCLE_TOP_END_ANGLE,
+                                    top_spikes,
                                 )
-                            if bottom_spikes:
-                                arcs.append(
-                                    (
-                                        HALO_CIRCLE_BOTTOM_START_ANGLE,
-                                        HALO_CIRCLE_BOTTOM_END_ANGLE,
-                                        bottom_spikes,
-                                    )
-                                )
-                            total_spikes = sum(spikes for _, _, spikes in arcs)
-                            if total_spikes == 0:
-                                arcs = []
-
-                            global_index = 0
-                            for start_angle, end_angle, spikes in arcs:
-                                if spikes == 1:
-                                    angles = [start_angle]
-                                else:
-                                    angles = [
-                                        start_angle
-                                        + (idx / (spikes - 1)) * (end_angle - start_angle)
-                                        for idx in range(spikes)
-                                    ]
-                                for angle in angles:
-                                    frac = (
-                                        global_index / max(1, total_spikes - 1)
-                                        if total_spikes > 1
-                                        else 0.0
-                                    )
-                                    level = band_level_for_fraction(frac)
-                                    global_index += 1
-                                    dx = math.cos(angle)
-                                    dy = -math.sin(angle)
-                                    hit = _ray_hit_mask(base_mask, center, (dx, dy), max_steps)
-                                    if hit is not None:
-                                        base_radius = math.hypot(
-                                            hit[0] - center[0], hit[1] - center[1]
-                                        )
-                                    else:
-                                        base_radius = min(width, height) * 0.25
-                                    base_radius = (
-                                        base_radius * HALO_CIRCLE_RADIUS_SCALE + base_offset
-                                    )
-
-                                    spike_height = (level**HALO_GAMMA) * max_height
-                                    spike_height += kick_level * HALO_KICK_GAIN * max_height
-                                    tip_radius = base_radius + spike_height
-                                    base_width = max(
-                                        HALO_CIRCLE_BASE_WIDTH_MIN,
-                                        min(width, height) * HALO_CIRCLE_BASE_WIDTH_RATIO,
-                                    )
-                                    perp_x = -dy
-                                    perp_y = dx
-                                    sample_count = max(3, int(HALO_CIRCLE_CURVE_SAMPLES))
-                                    if sample_count % 2 == 0:
-                                        sample_count += 1
-                                    curve_points = []
-                                    for sample_idx in range(sample_count):
-                                        t = sample_idx / max(1, sample_count - 1)
-                                        offset = (t - 0.5) * base_width
-                                        parabola = max(0.0, 1.0 - (2.0 * t - 1.0) ** 2)
-                                        shape = parabola**HALO_CIRCLE_PARABOLA
-                                        radius = base_radius + spike_height * shape
-                                        x = center[0] + dx * radius + perp_x * offset
-                                        y = center[1] + dy * radius + perp_y * offset
-                                        curve_points.append(
-                                            (
-                                                int(np.clip(x, 0, gray.shape[1] - 1)),
-                                                int(np.clip(y, 0, gray.shape[0] - 1)),
-                                            )
-                                        )
-                                    tri = np.array(curve_points, dtype=np.int32)
-                                    strength = min(
-                                        1.0,
-                                        level * HALO_INTENSITY_GAIN
-                                        + kick_level * HALO_INTENSITY_KICK,
-                                    )
-                                    if HALO_SOLID_FILL:
-                                        cv2.fillPoly(halo_mask, [tri], 255)
-                                        cv2.fillPoly(halo_intensity, [tri], float(strength))
-                                    if HALO_TIP_OUTLINE:
-                                        base_mid = (
-                                            int(
-                                                np.clip(
-                                                    center[0] + dx * base_radius,
-                                                    0,
-                                                    gray.shape[1] - 1,
-                                                )
-                                            ),
-                                            int(
-                                                np.clip(
-                                                    center[1] + dy * base_radius,
-                                                    0,
-                                                    gray.shape[0] - 1,
-                                                )
-                                            ),
-                                        )
-                                        tip_point = (
-                                            int(
-                                                np.clip(
-                                                    center[0] + dx * tip_radius,
-                                                    0,
-                                                    gray.shape[1] - 1,
-                                                )
-                                            ),
-                                            int(
-                                                np.clip(
-                                                    center[1] + dy * tip_radius,
-                                                    0,
-                                                    gray.shape[0] - 1,
-                                                )
-                                            ),
-                                        )
-                                        cv2.line(
-                                            halo_mask,
-                                            base_mid,
-                                            tip_point,
-                                            255,
-                                            HALO_THICKNESS,
-                                        )
-                                        cv2.line(
-                                            halo_intensity,
-                                            base_mid,
-                                            tip_point,
-                                            float(strength),
-                                            HALO_THICKNESS,
-                                        )
-                        else:
-                            points = _smooth_closed_curve(contour, HALO_SMOOTH_WINDOW)
-                            count = points.shape[0]
-                            normals = np.zeros_like(points)
-                            for idx in range(count):
-                                prev_point = points[(idx - 1) % count]
-                                next_point = points[(idx + 1) % count]
-                                tangent = next_point - prev_point
-                                length = math.hypot(float(tangent[0]), float(tangent[1]))
-                                if length < 1e-3:
-                                    continue
-                                normal = np.array(
-                                    [-tangent[1], tangent[0]], dtype=np.float32
-                                ) / length
-                                sample = points[idx] + normal * 2.0
-                                sx = int(np.clip(sample[0], 0, gray.shape[1] - 1))
-                                sy = int(np.clip(sample[1], 0, gray.shape[0] - 1))
-                                if base_mask[sy, sx] > 0:
-                                    normal = -normal
-                                normals[idx] = normal
-
-                            spike_step = max(1, int(count / spike_count))
-                            spike_width = max(
-                                HALO_SPIKE_MIN_WIDTH, int(spike_step * HALO_SPIKE_WIDTH_RATIO)
                             )
-                            max_width = max(3, int(count * HALO_SPIKE_MAX_RATIO))
-                            spike_width = min(spike_width, max_width)
-                            if spike_width % 2 == 0:
-                                spike_width += 1
-                            half_width = spike_width // 2
+                        if bottom_spikes:
+                            arcs.append(
+                                (
+                                    HALO_CIRCLE_BOTTOM_START_ANGLE,
+                                    HALO_CIRCLE_BOTTOM_END_ANGLE,
+                                    bottom_spikes,
+                                )
+                            )
+                        total_spikes = sum(spikes for _, _, spikes in arcs)
+                        if total_spikes == 0:
+                            arcs = []
 
-                            center_indices = [
-                                (idx * spike_step) % count for idx in range(spike_count)
-                            ]
-                            for spike_idx, center_index in enumerate(center_indices):
+                        global_index = 0
+                        for start_angle, end_angle, spikes in arcs:
+                            if spikes == 1:
+                                angles = [start_angle]
+                            else:
+                                angles = [
+                                    start_angle
+                                    + (idx / (spikes - 1)) * (end_angle - start_angle)
+                                    for idx in range(spikes)
+                                ]
+                            for angle in angles:
                                 frac = (
-                                    spike_idx / max(1, spike_count - 1)
-                                    if spike_count > 1
+                                    global_index / max(1, total_spikes - 1)
+                                    if total_spikes > 1
                                     else 0.0
                                 )
                                 level = band_level_for_fraction(frac)
-                                base_points: list[Tuple[int, int]] = []
-                                tip_points: list[Tuple[int, int]] = []
-                                tip_strengths: list[float] = []
-                                for offset in range(
-                                    -half_width, half_width + 1, HALO_SAMPLE_STEP
-                                ):
-                                    idx = (center_index + offset) % count
-                                    normal = normals[idx]
-                                    if normal[0] == 0 and normal[1] == 0:
-                                        continue
-                                    t = (offset + half_width) / max(1, spike_width - 1)
-                                    parabola = max(0.0, 1.0 - (2.0 * t - 1.0) ** 2)
-                                    shape = parabola**HALO_SPIKE_PARABOLA
-                                    if shape <= 0.0:
-                                        continue
-                                    spike = (level**HALO_GAMMA) * shape * max_height
-                                    spike += kick_level * HALO_KICK_GAIN * shape * max_height
-                                    offset_px = base_offset + spike
-                                    if offset_px < HALO_MIN_HEIGHT:
-                                        continue
-                                    point = points[idx]
-                                    offset_point = point + normal * offset_px
-                                    x0 = int(np.clip(point[0], 0, gray.shape[1] - 1))
-                                    y0 = int(np.clip(point[1], 0, gray.shape[0] - 1))
-                                    x1 = int(np.clip(offset_point[0], 0, gray.shape[1] - 1))
-                                    y1 = int(np.clip(offset_point[1], 0, gray.shape[0] - 1))
-                                    strength = min(
-                                        1.0,
-                                        (
-                                            level * HALO_INTENSITY_GAIN
-                                            + kick_level * HALO_INTENSITY_KICK
-                                        )
-                                        * shape,
+                                global_index += 1
+                                dx = math.cos(angle)
+                                dy = -math.sin(angle)
+                                hit = _ray_hit_mask(base_mask, center, (dx, dy), max_steps)
+                                if hit is not None:
+                                    base_radius = math.hypot(
+                                        hit[0] - center[0], hit[1] - center[1]
                                     )
-                                    base_points.append((x0, y0))
-                                    tip_points.append((x1, y1))
-                                    tip_strengths.append(strength)
+                                else:
+                                    base_radius = min(width, height) * 0.25
+                                base_radius = base_radius * HALO_CIRCLE_RADIUS_SCALE + base_offset
 
-                                if len(base_points) < 2:
-                                    continue
-
-                                for idx in range(len(base_points) - 1):
-                                    p0 = base_points[idx]
-                                    p1 = base_points[idx + 1]
-                                    t0 = tip_points[idx]
-                                    t1 = tip_points[idx + 1]
-                                    strength = (
-                                        tip_strengths[idx] + tip_strengths[idx + 1]
-                                    ) * 0.5
-                                    if HALO_SOLID_FILL:
-                                        quad = np.array([p0, p1, t1, t0], dtype=np.int32)
-                                        cv2.fillPoly(halo_mask, [quad], 255)
-                                        cv2.fillPoly(
-                                            halo_intensity, [quad], float(strength)
+                                spike_height = (level**HALO_GAMMA) * max_height
+                                spike_height += kick_level * HALO_KICK_GAIN * max_height
+                                tip_radius = base_radius + spike_height
+                                base_width = max(
+                                    HALO_CIRCLE_BASE_WIDTH_MIN,
+                                    min(width, height) * HALO_CIRCLE_BASE_WIDTH_RATIO,
+                                )
+                                perp_x = -dy
+                                perp_y = dx
+                                sample_count = max(3, int(HALO_CIRCLE_CURVE_SAMPLES))
+                                if sample_count % 2 == 0:
+                                    sample_count += 1
+                                curve_points = []
+                                for sample_idx in range(sample_count):
+                                    t = sample_idx / max(1, sample_count - 1)
+                                    offset = (t - 0.5) * base_width
+                                    parabola = max(0.0, 1.0 - (2.0 * t - 1.0) ** 2)
+                                    shape = parabola**HALO_CIRCLE_PARABOLA
+                                    radius = base_radius + spike_height * shape
+                                    x = center[0] + dx * radius + perp_x * offset
+                                    y = center[1] + dy * radius + perp_y * offset
+                                    curve_points.append(
+                                        (
+                                            int(np.clip(x, 0, gray.shape[1] - 1)),
+                                            int(np.clip(y, 0, gray.shape[0] - 1)),
                                         )
-
+                                    )
+                                tri = np.array(curve_points, dtype=np.int32)
+                                if HALO_SOLID_FILL:
+                                    cv2.fillPoly(halo_mask, [tri], 255)
                                 if HALO_TIP_OUTLINE:
-                                    center_idx = len(base_points) // 2
-                                    p0 = base_points[center_idx]
-                                    t0 = tip_points[center_idx]
-                                    strength = tip_strengths[center_idx]
-                                    cv2.line(halo_mask, p0, t0, 255, HALO_THICKNESS)
+                                    base_mid = (
+                                        int(
+                                            np.clip(
+                                                center[0] + dx * base_radius,
+                                                0,
+                                                gray.shape[1] - 1,
+                                            )
+                                        ),
+                                        int(
+                                            np.clip(
+                                                center[1] + dy * base_radius,
+                                                0,
+                                                gray.shape[0] - 1,
+                                            )
+                                        ),
+                                    )
+                                    tip_point = (
+                                        int(
+                                            np.clip(
+                                                center[0] + dx * tip_radius,
+                                                0,
+                                                gray.shape[1] - 1,
+                                            )
+                                        ),
+                                        int(
+                                            np.clip(
+                                                center[1] + dy * tip_radius,
+                                                0,
+                                                gray.shape[0] - 1,
+                                            )
+                                        ),
+                                    )
                                     cv2.line(
-                                        halo_intensity,
-                                        p0,
-                                        t0,
-                                        float(strength),
+                                        halo_mask,
+                                        base_mid,
+                                        tip_point,
+                                        255,
                                         HALO_THICKNESS,
                                     )
-
-                                if HALO_CONNECT_TIPS:
-                                    for idx in range(1, len(tip_points)):
-                                        p0 = tip_points[idx - 1]
-                                        p1 = tip_points[idx]
-                                        strength = (
-                                            tip_strengths[idx - 1] + tip_strengths[idx]
-                                        ) * 0.5 * HALO_CONNECT_STRENGTH
-                                        strength = min(1.0, strength)
-                                        cv2.line(
-                                            halo_mask,
-                                            p0,
-                                            p1,
-                                            255,
-                                            HALO_CONNECT_THICKNESS,
-                                        )
-                                        cv2.line(
-                                            halo_intensity,
-                                            p0,
-                                            p1,
-                                            float(strength),
-                                            HALO_CONNECT_THICKNESS,
-                                        )
 
                         if HALO_OUTSIDE_ONLY:
                             halo_mask = cv2.bitwise_and(
                                 halo_mask, cv2.bitwise_not(base_mask)
                             )
-                            halo_intensity *= (base_mask == 0)
 
-            shelf_mask = None
-            shelf_intensity = None
-            if SHELF_ENABLED and np.any(base_mask):
-                bounds = _mask_bounds(base_mask)
-                contour = _largest_contour(base_mask)
-                if bounds is not None and contour is not None:
-                    x_min, x_max, y_min, y_max = bounds
-                    width = x_max - x_min + 1
-                    height = y_max - y_min + 1
-                    if width > 4 and height > 4 and contour.shape[0] > 12:
-                        shelf_mask = np.zeros_like(base_mask)
-                        shelf_intensity = np.zeros_like(gray, dtype=np.float32)
-                        max_height = max(1.0, min(width, height) * SHELF_MAX_HEIGHT_RATIO)
-                        base_offset = SHELF_OUTSET + max_height * SHELF_BASE_OFFSET_RATIO
-                        amplitude = SHELF_BASE + kick_level * SHELF_GAIN
-                        phase_offset = math.pi / max(1, SHELF_BANDS)
-
-                        points = _smooth_closed_curve(contour, SHELF_SMOOTH_WINDOW)
-                        count = points.shape[0]
-                        normals = np.zeros_like(points)
-                        for idx in range(count):
-                            prev_point = points[(idx - 1) % count]
-                            next_point = points[(idx + 1) % count]
-                            tangent = next_point - prev_point
-                            length = math.hypot(float(tangent[0]), float(tangent[1]))
-                            if length < 1e-3:
-                                continue
-                            normal = np.array([-tangent[1], tangent[0]], dtype=np.float32) / length
-                            sample = points[idx] + normal * 2.0
-                            sx = int(np.clip(sample[0], 0, gray.shape[1] - 1))
-                            sy = int(np.clip(sample[1], 0, gray.shape[0] - 1))
-                            if base_mask[sy, sx] > 0:
-                                normal = -normal
-                            normals[idx] = normal
-
-                        if SHELF_MODE == "random":
-                            if frame_time - last_shelf_change >= SHELF_RANDOM_HOLD:
-                                shelf_center_index = int(rng.integers(0, count))
-                                last_shelf_change = frame_time
-                            band_centers = [shelf_center_index]
-                        else:
-                            phase = (frame_time * SHELF_SWEEP_SPEED) % 1.0
-                            band_centers = [
-                                int((phase + band_idx / SHELF_BANDS) * count) % count
-                                for band_idx in range(SHELF_BANDS)
-                            ]
-
-                        band_length = max(6, int(count * SHELF_ARC_RATIO))
-                        half_band = band_length // 2
-                        for band_index, center_index in enumerate(band_centers):
-                            offset_points: list[Tuple[int, int]] = []
-                            offset_strengths: list[float] = []
-                            for offset in range(-half_band, half_band + 1, SHELF_SAMPLE_STEP):
-                                idx = (center_index + offset) % count
-                                point = points[idx]
-                                normal = normals[idx]
-                                if normal[0] == 0 and normal[1] == 0:
-                                    continue
-                                t = (offset + half_band) / max(1, band_length)
-                                parabola = max(0.0, 1.0 - (2.0 * t - 1.0) ** 2)
-                                wave = math.sin(
-                                    frame_time * SHELF_SPEED
-                                    + t * math.pi * SHELF_WAVE_FREQ
-                                    + band_index * phase_offset
-                                )
-                                magnitude = abs(wave)
-                                spike = (
-                                    (parabola**SHELF_PARABOLA_POWER)
-                                    * magnitude
-                                    * amplitude
-                                    * max_height
-                                    * SHELF_SPIKE_RATIO
-                                )
-                                offset_px = base_offset + spike
-                                if offset_px < SHELF_MIN_HEIGHT:
-                                    continue
-                                offset_point = point + normal * offset_px
-                                x = int(np.clip(offset_point[0], 0, gray.shape[1] - 1))
-                                y = int(np.clip(offset_point[1], 0, gray.shape[0] - 1))
-                                offset_points.append((x, y))
-                                offset_strengths.append(parabola * magnitude * amplitude)
-
-                            for idx in range(1, len(offset_points)):
-                                p0 = offset_points[idx - 1]
-                                p1 = offset_points[idx]
-                                strength = offset_strengths[idx]
-                                cv2.line(shelf_mask, p0, p1, 255, SHELF_THICKNESS)
-                                cv2.line(
-                                    shelf_intensity,
-                                    p0,
-                                    p1,
-                                    float(strength),
-                                    SHELF_THICKNESS,
-                                )
-
-                        if SHELF_OUTSIDE_ONLY:
-                            shelf_mask = cv2.bitwise_and(
-                                shelf_mask, cv2.bitwise_not(base_mask)
-                            )
-                            shelf_intensity *= (base_mask == 0)
-
-            spike_mask = None
-            if SPIKES_ENABLED and kick_level >= SPIKE_MIN_KICK and np.any(mask):
+            halo_particle_mask = None
+            if (
+                HALO_PARTICLES_ENABLED
+                and kick_level >= HALO_PARTICLE_MIN_KICK
+                and np.any(base_mask)
+            ):
                 edges = cv2.morphologyEx(base_mask, cv2.MORPH_GRADIENT, kernel)
-                radius = max(1, int((kick_level**SPIKE_GAMMA) * SPIKE_MAX_RADIUS))
+                radius = max(
+                    1, int((kick_level**HALO_PARTICLE_GAMMA) * HALO_PARTICLE_MAX_RADIUS)
+                )
                 if radius > 0:
-                    spike_kernel = spike_kernels.get(radius)
-                    if spike_kernel is None:
+                    particle_kernel = halo_particle_kernels.get(radius)
+                    if particle_kernel is None:
                         size = radius * 2 + 1
-                        spike_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (size, size))
-                        spike_kernels[radius] = spike_kernel
-                    spike_layer = cv2.dilate(edges, spike_kernel, iterations=1)
-                    density = min(1.0, SPIKE_DENSITY_BASE + kick_level * SPIKE_DENSITY_GAIN)
-                    noise = (rng.random(spike_layer.shape) < density).astype(np.uint8) * 255
-                    spike_mask = cv2.bitwise_and(spike_layer, noise)
-                    if SPIKE_OUTSIDE_ONLY:
-                        spike_mask = cv2.bitwise_and(spike_mask, cv2.bitwise_not(base_mask))
+                        particle_kernel = cv2.getStructuringElement(
+                            cv2.MORPH_ELLIPSE, (size, size)
+                        )
+                        halo_particle_kernels[radius] = particle_kernel
+                    particle_layer = cv2.dilate(edges, particle_kernel, iterations=1)
+                    density = min(
+                        1.0,
+                        HALO_PARTICLE_DENSITY_BASE
+                        + kick_level * HALO_PARTICLE_DENSITY_GAIN,
+                    )
+                    noise = (rng.random(particle_layer.shape) < density).astype(np.uint8) * 255
+                    halo_particle_mask = cv2.bitwise_and(particle_layer, noise)
+                    if HALO_PARTICLE_OUTSIDE_ONLY:
+                        halo_particle_mask = cv2.bitwise_and(
+                            halo_particle_mask, cv2.bitwise_not(base_mask)
+                        )
 
             mask_out = base_mask
-            boost_mask = spike_mask
-            if spike_mask is not None:
-                mask_out = cv2.bitwise_or(mask_out, spike_mask)
-            if shelf_mask is not None:
-                if boost_mask is None:
-                    boost_mask = shelf_mask
-                else:
-                    boost_mask = cv2.bitwise_or(boost_mask, shelf_mask)
-                mask_out = cv2.bitwise_or(mask_out, shelf_mask)
+            boost_mask = None
             if halo_mask is not None:
-                if boost_mask is None:
-                    boost_mask = halo_mask
-                else:
-                    boost_mask = cv2.bitwise_or(boost_mask, halo_mask)
                 mask_out = cv2.bitwise_or(mask_out, halo_mask)
-
-            extra_intensity = ripple_intensity
-            if shelf_intensity is not None:
-                if extra_intensity is None:
-                    extra_intensity = shelf_intensity
+                boost_mask = halo_mask
+            if halo_particle_mask is not None:
+                mask_out = cv2.bitwise_or(mask_out, halo_particle_mask)
+                if boost_mask is None:
+                    boost_mask = halo_particle_mask
                 else:
-                    extra_intensity = np.clip(
-                        extra_intensity + shelf_intensity, 0.0, 1.0
-                    )
-            if halo_intensity is not None:
-                if extra_intensity is None:
-                    extra_intensity = halo_intensity
-                else:
-                    extra_intensity = np.clip(
-                        extra_intensity + halo_intensity, 0.0, 1.0
-                    )
-
+                    boost_mask = cv2.bitwise_or(boost_mask, halo_particle_mask)
             if ripple_intensity is not None:
                 ripple_mask = (ripple_intensity > RIPPLE_MASK_THRESHOLD).astype(np.uint8) * 255
                 if RIPPLE_INSIDE_ONLY:
                     ripple_mask = cv2.bitwise_and(ripple_mask, base_mask)
                 else:
                     ripple_mask = cv2.bitwise_and(ripple_mask, cv2.bitwise_not(base_mask))
-                if boost_mask is None:
-                    boost_mask = ripple_mask
-                else:
-                    boost_mask = cv2.bitwise_or(boost_mask, ripple_mask)
                 mask_out = cv2.bitwise_or(mask_out, ripple_mask)
 
-            highlight_mask = None
-            if BRAILLE_WHITE_SPIKES and RENDER_MODE == "braille":
-                if halo_mask is not None and spike_mask is not None:
-                    highlight_mask = cv2.bitwise_or(halo_mask, spike_mask)
-                elif halo_mask is not None:
-                    highlight_mask = halo_mask
-                elif spike_mask is not None:
-                    highlight_mask = spike_mask
-
-            braille_spike_mask = spike_mask
-            if RENDER_MODE == "braille" and HALO_SOLID_FILL and halo_mask is not None:
-                if braille_spike_mask is None:
-                    braille_spike_mask = halo_mask
+            highlight_mask = halo_mask
+            if halo_particle_mask is not None:
+                if highlight_mask is None:
+                    highlight_mask = halo_particle_mask
                 else:
-                    braille_spike_mask = cv2.bitwise_or(braille_spike_mask, halo_mask)
+                    highlight_mask = cv2.bitwise_or(highlight_mask, halo_particle_mask)
 
-            if RENDER_MODE == "braille":
-                braille_lines, highlight_cells = _frame_to_braille(
-                    gray,
-                    mask_out,
-                    kick_level,
-                    braille_spike_mask,
-                    extra_intensity,
-                    braille_dither_cache,
-                    highlight_mask,
+            braille_lines, highlight_cells = _frame_to_braille(
+                gray,
+                mask_out,
+                boost_mask,
+                ripple_intensity,
+                braille_dither_cache,
+                highlight_mask,
+            )
+            has_highlight = highlight_cells is not None and np.any(highlight_cells)
+            if has_highlight:
+                ascii_frame = _colorize_braille(
+                    braille_lines,
+                    highlight_cells,
+                    color,
+                    HALO_HIGHLIGHT_COLOR,
                 )
-                has_highlight = (
-                    highlight_cells is not None and np.any(highlight_cells)
-                )
-                if BRAILLE_WHITE_SPIKES and has_highlight:
-                    ascii_frame = _colorize_braille(
-                        braille_lines,
-                        highlight_cells,
-                        color,
-                        WHITE_COLOR,
-                    )
-                    frame_prefix = ""
-                    use_color = bool(color) or has_highlight
-                else:
-                    ascii_frame = "\n".join(braille_lines)
-                    frame_prefix = color
-                    use_color = bool(color)
+                frame_prefix = ""
+                use_color = bool(color) or has_highlight
             else:
-                ascii_frame = _frame_to_ascii(
-                    gray, mask_out, lookup, SOLID_SILHOUETTE, boost_mask
-                )
+                ascii_frame = "\n".join(braille_lines)
                 frame_prefix = color
                 use_color = bool(color)
 
