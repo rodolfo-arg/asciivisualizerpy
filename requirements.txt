@@ -2,3 +2,5 @@ numpy
 opencv-python
 sounddevice
 mediapipe
+mido
+python-rtmidi

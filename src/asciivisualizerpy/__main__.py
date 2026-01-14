@@ -44,6 +44,12 @@ def main() -> None:
         "--seg-model",
         help=f"Segmentation model path for mediapipe tasks (default: {DEFAULT_SEGMENTATION_MODEL})",
     )
+    parser.add_argument("--no-hand", action="store_true", help="Disable hand detection")
+    parser.add_argument(
+        "--hand-backend",
+        choices=["auto", "solutions"],
+        help="Hand detection backend (default: auto)",
+    )
 
     args = parser.parse_args()
     config = load_config(args.config)
@@ -76,6 +82,20 @@ def main() -> None:
         if args.seg_model is not None
         else config.get("segmentation_model_path", str(DEFAULT_SEGMENTATION_MODEL))
     )
+    midi_enabled = config.get("midi_enabled")
+    if midi_enabled is None:
+        midi_enabled = True
+    midi_input_port = config.get("midi_input_port")
+    if isinstance(midi_input_port, str) and not midi_input_port.strip():
+        midi_input_port = None
+    hand_enabled = config.get("hand_enabled", True)
+    if args.no_hand:
+        hand_enabled = False
+    hand_backend = config.get("hand_backend")
+    if args.hand_backend is not None:
+        hand_backend = args.hand_backend
+    if hand_backend is None:
+        hand_backend = "auto"
 
     run(
         camera_index=camera_index,
@@ -86,6 +106,10 @@ def main() -> None:
         segmentation_threshold=segmentation_threshold,
         mog2_learning_rate=mog2_learning_rate,
         segmentation_model_path=segmentation_model_path,
+        midi_enabled=midi_enabled,
+        midi_input_port=midi_input_port,
+        hand_enabled=hand_enabled,
+        hand_backend=hand_backend,
     )
 
 
